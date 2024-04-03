@@ -5,9 +5,10 @@ from typing import List
 class Trader:
 
     position = {'AMETHYSTS': 0, 'STARFRUIT': 0}
-    POSITION_LIMIT = {'AMETHYSTS' : 40, 'STARFRUIT' : 20}
+    POSITION_LIMIT = {'AMETHYSTS' : 40, 'STARFRUIT' : 40}
+    STARFRUIT_SE = 3.7123253
     
-    def compute_orders(self, product, order_depth, acc_bid, acc_ask):
+    def compute_orders_amethysts_or_starfruit(self, product, order_depth, acc_bid, acc_ask):
         orders: List[Order] = []
 
         sell_ord = collections.OrderedDict(sorted(order_depth.sell_orders.items()))
@@ -33,13 +34,20 @@ class Trader:
         result = {}
         
         for product in state.order_depths:
+            order_depth: OrderDepth = state.order_depths[product]
+            orders: List[Order] = []
             if product == 'AMETHYSTS':
-                acc_bid, acc_ask = 10000, 10000 
-
-                order_depth: OrderDepth = state.order_depths[product]
-                orders: List[Order] = []
+                acc_bid, acc_ask = 10000, 10000
                 
-                orders = self.compute_orders(product, order_depth, acc_bid, acc_ask)
+                orders = self.compute_orders_amethysts_or_starfruit(product, order_depth, acc_bid, acc_ask)
+
+                result[product] = orders
+
+            if product == "STARFRUIT":
+                acceptable_price = -0.00023852 * state.timestamp + 5001.4524794
+                acc_bid, acc_ask = acceptable_price, acceptable_price
+
+                orders = self.compute_orders_amethysts_or_starfruit(product, order_depth, acc_bid, acc_ask)
 
                 result[product] = orders
 
