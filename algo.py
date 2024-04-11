@@ -27,7 +27,7 @@ class Trader:
         return (best_bid + best_ask) / 2
     
 
-    def compute_orders_amethysts_or_starfruit(self, product, order_depth, acc_bid, acc_ask):
+    def compute_orders_starfruit(self, product, order_depth, acc_bid, acc_ask):
         orders: List[Order] = []
 
         sell_ord = collections.OrderedDict(sorted(order_depth.sell_orders.items()))
@@ -61,12 +61,65 @@ class Trader:
             order_depth: OrderDepth = state.order_depths[product]
             orders: List[Order] = []
             if product == 'AMETHYSTS':
-                
-                acc_bid, acc_ask = 10000, 10000
-                
-                orders = self.compute_orders_amethysts_or_starfruit(product, order_depth, acc_bid, acc_ask)
+                spread = 1
+                open_spread = 3
+                start_trading = 0
+                position_limit = 20
+                position_spread = 15
+                current_position = state.position.get(product,0)
+                order_depth: OrderDepth = state.order_depths[product]
+                orders: list[Order] = []
+                    
+                if state.timestamp >= start_trading:
+                    if len(order_depth.sell_orders) > 0:
+                        best_ask = min(order_depth.sell_orders.keys())
+                        
+                        if best_ask <= 10000-spread:
+                            best_ask_volume = order_depth.sell_orders[best_ask]
+                        else:
+                            best_ask_volume = 0
+                    else:
+                        best_ask_volume = 0
+                         
+                    if len(order_depth.buy_orders) > 0:
+                        best_bid = max(order_depth.buy_orders.keys())
+                    
+                        if best_bid >= 10000+spread:
+                            best_bid_volume = order_depth.buy_orders[best_bid]
+                        else:
+                            best_bid_volume = 0 
+                    else:
+                        best_bid_volume = 0
+                    
+                    if current_position - best_ask_volume > position_limit:
+                        best_ask_volume = current_position - position_limit
+                        open_ask_volume = 0
+                    else:
+                        open_ask_volume = current_position - position_spread - best_ask_volume
+                        
+                    if current_position - best_bid_volume < -position_limit:
+                        best_bid_volume = current_position + position_limit
+                        open_bid_volume = 0
+                    else:
+                        open_bid_volume = current_position + position_spread - best_bid_volume
+                        
+                    if -open_ask_volume < 0:
+                        open_ask_volume = 0         
+                    if open_bid_volume < 0:
+                        open_bid_volume = 0
 
+                    if -best_ask_volume > 0:
+                        orders.append(Order(product, best_ask, -best_ask_volume))
+                    if -open_ask_volume > 0:
+                        orders.append(Order(product, 10000 - open_spread, -open_ask_volume))
+
+                    if best_bid_volume > 0:
+                        orders.append(Order(product, best_bid, -best_bid_volume))
+                    if open_bid_volume > 0:
+                        orders.append(Order(product, 10000 + open_spread, -open_bid_volume))
+                        
                 result[product] = orders
+                
 
             if product == "STARFRUIT":  
                 cur_mid_price = self.calc_mid_price(order_depth)  
@@ -87,7 +140,7 @@ class Trader:
                 
                     starfruit_midpr_cache.pop(0)
 
-                orders = self.compute_orders_amethysts_or_starfruit(product, order_depth, acc_bid, acc_ask)
+                orders = self.compute_orders_starfruit(product, order_depth, acc_bid, acc_ask)
 
                 result[product] = orders
 
